@@ -1,0 +1,32 @@
+# macOS
+.DS_Store
+
+# Node
+node_modules/
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build artifacts
+dist/
+build/
+
+# Env files
+.env
+.env.local
+backend/.env
+frontend/.env
+
+# Coverage
+coverage/
+
+# Logs
+logs/
+*.log
+
+# Vite cache
+.vite/
+
+# TypeScript
+*.tsbuildinfo
