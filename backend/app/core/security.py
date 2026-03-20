@@ -5,38 +5,23 @@ from typing import Optional
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+from passlib.exc import PasswordSizeError
 
 from backend.app.core.config import settings
 
 
-# bcrypt は72バイトを超えるパスワードでエラーになるため、明示的に72バイトで切り詰める
-_BCRYPT_MAX_BYTES = 72
-
-# bcrypt を利用したハッシュ/検証用コンテキスト
-# bcrypt__truncate_error=False で 72 バイト超の入力でも自動で先頭72バイトに丸めてエラーにしない
+# パスワードハッシュ方式: 長さ制限の少ない pbkdf2_sha256 を利用
 pwd_context = CryptContext(
-    schemes=["bcrypt"],
+    schemes=["pbkdf2_sha256"],
     deprecated="auto",
-    bcrypt__truncate_error=False,
-    bcrypt__ident="2b",
+    pbkdf2_sha256__rounds=29000,
 )
 
 
 def _normalize_password(password: str) -> str:
-    """bcrypt の上限 72 バイトを超えないよう、必ず先頭72バイトで丸める。"""
+    """pbkdf2_sha256 用に文字列化のみを行う（長さ制限なし）。"""
 
-    if not isinstance(password, str):
-        password = str(password)
-
-    # 一律で 72 バイトに丸める（UTF-8 の不完全な末尾は破棄）
-    truncated = password.encode("utf-8")[:_BCRYPT_MAX_BYTES]
-    safe = truncated.decode("utf-8", errors="ignore")
-
-    # 念のため再エンコード後も 72 バイト以下であることを保証
-    if len(safe.encode("utf-8")) > _BCRYPT_MAX_BYTES:
-        safe = safe.encode("utf-8")[:_BCRYPT_MAX_BYTES].decode("utf-8", errors="ignore")
-
-    return safe
+    return password if isinstance(password, str) else str(password)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -48,7 +33,8 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def get_password_hash(password: str) -> str:
     """パスワードをハッシュ化（72バイト制限対応）。"""
 
-    return pwd_context.hash(_normalize_password(password))
+    normalized = _normalize_password(password)
+    return pwd_context.hash(normalized)
 
 
 def create_access_token(subject: str, expires_minutes: int | None = None) -> str:
