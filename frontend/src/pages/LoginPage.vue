@@ -6,10 +6,35 @@
           <v-card-title class="text-h6">ログイン</v-card-title>
           <v-card-text>
             <v-form @submit.prevent="onSubmit">
-              <v-text-field v-model="email" label="メール" type="email" required></v-text-field>
-              <v-text-field v-model="password" label="パスワード" type="password" required></v-text-field>
-              <v-btn type="submit" color="primary" block class="mt-4">ログイン</v-btn>
-              <div class="error mt-2" v-if="error">{{ error }}</div>
+              <!-- メールアドレス入力 -->
+              <v-text-field
+                v-model="email"
+                label="メール"
+                type="email"
+                required
+                prepend-icon="mdi-email"
+                density="comfortable"
+                variant="outlined"
+              ></v-text-field>
+
+              <!-- パスワード入力 -->
+              <v-text-field
+                v-model="password"
+                label="パスワード"
+                type="password"
+                required
+                prepend-icon="mdi-lock"
+                density="comfortable"
+                variant="outlined"
+              ></v-text-field>
+
+              <!-- ログインボタン -->
+              <v-btn type="submit" color="primary" block class="mt-4" :loading="loading">
+                ログイン
+              </v-btn>
+
+              <!-- エラー表示 -->
+              <v-alert v-if="error" type="error" dense class="mt-3">{{ error }}</v-alert>
             </v-form>
           </v-card-text>
         </v-card>
@@ -27,9 +52,11 @@ const router = useRouter()
 const email = ref('')
 const password = ref('')
 const error = ref('')
+const loading = ref(false)
 
 const onSubmit = async () => {
   error.value = ''
+  loading.value = true
   try {
     const res = await api.post('/auth/login', { email: email.value, password: password.value })
     const token = res.data.access_token
@@ -38,6 +65,8 @@ const onSubmit = async () => {
     router.push('/dashboard')
   } catch (e) {
     error.value = '認証に失敗しました'
+  } finally {
+    loading.value = false
   }
 }
 </script>
