@@ -2,9 +2,10 @@
 
 import uuid
 from sqlalchemy import Column, Date, DateTime, ForeignKey, String
-from sqlalchemy.dialects.postgresql import UUID, DATERANGE
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
-from sqlalchemy import Index, ExcludeConstraint
+from sqlalchemy import Index
+from sqlalchemy.dialects.postgresql import ExcludeConstraint
 from sqlalchemy import func as sa_func
 
 from backend.app.core.database import Base

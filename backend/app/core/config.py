@@ -1,7 +1,7 @@
 """設定値の管理モジュール。環境変数から読み込み、サービス全体で共有する。
 """
 
-from pydantic_settings import BaseSettings
+from pydantic import BaseSettings
 
 
 class Settings(BaseSettings):
