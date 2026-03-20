@@ -1,58 +1,49 @@
-# roo_code_test
-roo codeで仕様書から詳細設計、コードを生成するテスト
-AIは人間と同じでサボるものだ。人間と同じようにプロジェクトコントロールをしてみる。
-古代からのウォーターフローで抑えられるはず。AIなのでアジャイルより早くウォーターフォールを回せるはず。
-人間のプロジェクトマネージャーがやることをAIにやらせる。人間はAIのプロジェクトマネージャーになる。
-そのためのroo codeのagentを作ってみる。
+# 備品管理・貸出予約アプリ
 
-## お試し開発
+## 起動手順（docker-compose）
 
-「備品管理・貸出予約アプリを作りたい」だけから始めて、roo codeで仕様書から詳細設計、コードを生成するテスト2回目
+```bash
+docker compose up --build
+```
 
-まず、この備品管理・貸出予約アプリの主目的はどれに最も近いでしょうか？
+- バックエンド: http://localhost:8000
+- フロントエンド: http://localhost:5173
+- 初期管理者: admin@example.com / AdminPass123
 
-前回の反省を活かして、要件定義書は念入りに確認する。。。
-とりあえず大丈夫そうなので、次は設計書を書かせてみる
+## バックエンド手動起動（ローカル）
 
-「requirements.mdに従って設計して下さい」から開始
-面倒なので、実装させてみる
+```bash
+cd backend
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+export DATABASE_URL=postgresql+asyncpg://app:app@localhost:5432/app
+export ADMIN_EMAIL=admin@example.com
+export ADMIN_PASSWORD=AdminPass123
+uvicorn backend.app.main:app --reload
+```
 
+## フロントエンド起動（ローカル）
 
-## 1回目
+```bash
+cd frontend
+npm install
+npm run dev -- --host 0.0.0.0 --port 5173
+```
 
-「備品管理・貸出予約アプリを作りたい」だけから始めて、roo codeで仕様書から詳細設計、コードを生成するテスト
+## 主なエンドポイント
+- POST /auth/login
+- POST /auth/users (admin)
+- GET /items, POST /items, PUT /items/{id} (adminで作成/更新)
+- GET /reservations, POST /reservations, POST /reservations/{id}/cancel
+- POST /loans, POST /loans/{id}/return, GET /loans/overdue (admin)
+- GET /users (admin)
 
-![alt text](roo_code1.png)
+## テスト
 
-延々と質問に答えていくと最終的に要件定義書ができるので、人間でチェックする。
-よければ次。とりあえずテストなので何も考えずに次に行く
+```bash
+cd backend
+pytest
+```
 
-「requirements.mdに従って設計して下さい」から設計をさせる
-一発で出してきたので念の為「もう一度チェックして下さい」という。大きな変更が出てきたらしつこく「もう一度チェックして下さい」と言う。
-設計書は人間は見ない。チェックしない。AIに任せないとコード書いているのと同じなので、チェックしない。AIに任せる。
-
-設計書の重箱を突き始めたので、「実装して下さい」でコード生成させる。コードも人間は見ない。チェックしない。AIに任せる。
-一発でできるわけがないので、ここでもしつこく「進めて下さい」「もう一度チェックして下さい」と言う。
-おっと。起動方法の説明をREADME.mdに書いておいてと設計書に書くようにエージェントを修正。設計ドキュメントに仕込んでおく。
-レート制限に引っかかりまくる。。。簡単なアプリでも難しくしちゃってるかな。
-次はなるべく単純な要件,設計をするように強くエージェントに指示しよう:done
-デザインパターンを採用して、出来るだけ整理した設計を出せるように指示してみよう。:done
-
-適当なところで動かしてみて、動かないところを直してもらって完成。
-開いたらエラーだったので、直してもらう
-DBの構築面倒なので、「sqlスキーマの構築をbackend起動時に自動で行うようにして下さい」って頼むてへぺろ
-あー、設計でdocker-compose.yml出してもらうようにしよう:done
-とりあえず作ってもらう
-docker-compose前提設計にしていないと動かすまでに大変。。。
-AdminPass123
-
-備品マスターの作成漏れ。。。これじゃダメだな。
-一旦終わる。
-
-
-AI前
-![alt text](image.png)
-
-AI後
-![alt text](image-1.png)
-
+## 注意
+- 本番運用時は SECRET_KEY, ADMIN_PASSWORD を環境変数で必ず上書きしてください。
