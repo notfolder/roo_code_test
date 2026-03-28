@@ -1,0 +1,53 @@
+services:
+  # nginxコンテナ：フロントエンド配信 + バックエンドリバースプロキシ
+  nginx:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+  # バックエンドコンテナ：FastAPI APIサーバー
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql://appuser:apppassword@db:5432/appdb
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production-secret-key-32chars}
+      ACCESS_TOKEN_EXPIRE_HOURS: ${ACCESS_TOKEN_EXPIRE_HOURS:-8}
+      INITIAL_ADMIN_NAME: ${INITIAL_ADMIN_NAME:-admin}
+      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:-AdminPass123}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  # PostgreSQLコンテナ：データベース
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: apppassword
+      POSTGRES_DB: appdb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U appuser -d appdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
