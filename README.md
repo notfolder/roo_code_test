@@ -50,6 +50,8 @@ docker compose down
 docker compose down -v
 ```
 
+![alt text](image-2.png)
+
 ## 操作説明
 
 ### 管理担当者
