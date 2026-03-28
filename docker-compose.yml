@@ -1,9 +1,10 @@
 services:
   # nginxコンテナ：フロントエンド配信 + バックエンドリバースプロキシ
+  # ビルドコンテキストをルートにすることでnginx/とfrontend/を両方参照できる
   nginx:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: frontend/Dockerfile
     ports:
       - "80:80"
     depends_on:
