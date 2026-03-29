@@ -18,7 +18,6 @@ def create_initial_data():
                 name="管理者",
                 hashed_password=hash_password("admin1234"),
                 role="admin",
-                is_active=True,
             )
             db.add(admin)
             db.commit()

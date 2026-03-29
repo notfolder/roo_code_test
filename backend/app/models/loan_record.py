@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date, ForeignKey
+from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, func
 from app.database import Base
 
 
@@ -11,4 +11,4 @@ class LoanRecord(Base):
     loan_date = Column(Date, nullable=False)
     return_date = Column(Date, nullable=True)
     status = Column(String(20), nullable=False, default="active")  # active / returned
-    purpose = Column(String(200), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

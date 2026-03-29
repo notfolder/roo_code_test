@@ -11,7 +11,7 @@ class AuthService:
 
     def login(self, login_id: str, password: str) -> Optional[dict]:
         user = self.repo.get_by_login_id(login_id)
-        if not user or not user.is_active:
+        if not user:
             return None
         if not verify_password(password, user.hashed_password):
             return None

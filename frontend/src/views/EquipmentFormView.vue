@@ -3,14 +3,15 @@
     <h1 class="text-h5 mb-4">{{ isEdit ? '備品編集' : '備品登録' }}</h1>
     <v-card class="pa-4" max-width="600">
       <v-form @submit.prevent="handleSubmit">
-        <v-text-field v-model="form.name" label="備品名" required />
-        <v-select
-          v-model="form.category"
-          :items="categories"
-          label="カテゴリ"
+        <v-text-field
+          v-model="form.management_number"
+          label="管理番号"
           required
+          :readonly="isEdit"
+          :hint="isEdit ? '管理番号は変更できません' : ''"
+          persistent-hint
         />
-        <v-text-field v-model="form.notes" label="備考" />
+        <v-text-field v-model="form.name" label="品名" required />
         <v-alert v-if="errorMsg" type="error" class="mb-3">{{ errorMsg }}</v-alert>
         <div class="d-flex gap-2">
           <v-btn type="submit" color="primary" :loading="loading">{{ isEdit ? '更新' : '登録' }}</v-btn>
@@ -35,15 +36,14 @@ const isEdit = computed(() => !!route.params.id)
 const loading = ref(false)
 const errorMsg = ref('')
 
-const categories = ['ノートPC', 'プロジェクター', '延長コード', 'カメラ', 'その他']
-const form = ref({ name: '', category: '', notes: '' })
+const form = ref({ management_number: '', name: '' })
 
 onMounted(async () => {
   if (isEdit.value) {
     await equipmentStore.fetchAll()
     const eq = equipmentStore.items.find((e) => e.id === Number(route.params.id))
     if (eq) {
-      form.value = { name: eq.name, category: eq.category, notes: eq.notes || '' }
+      form.value = { management_number: eq.management_number, name: eq.name }
     }
   }
 })
@@ -53,7 +53,7 @@ async function handleSubmit() {
   loading.value = true
   try {
     if (isEdit.value) {
-      await equipmentStore.update(Number(route.params.id), form.value)
+      await equipmentStore.update(Number(route.params.id), { name: form.value.name })
     } else {
       await equipmentStore.create(form.value)
     }

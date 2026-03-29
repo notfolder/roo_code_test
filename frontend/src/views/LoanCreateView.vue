@@ -12,15 +12,14 @@
           required
         />
         <v-select
-          v-model="form.user_id"
+          v-model="form.borrower_user_id"
           :items="userStore.users"
           item-title="name"
           item-value="id"
-          label="利用者"
+          label="借用者"
           required
         />
         <v-text-field v-model="form.loan_date" label="貸出日" type="date" required />
-        <v-text-field v-model="form.purpose" label="用途" />
         <v-alert v-if="errorMsg" type="error" class="mb-3">{{ errorMsg }}</v-alert>
         <v-alert v-if="successMsg" type="success" class="mb-3">{{ successMsg }}</v-alert>
         <div class="d-flex gap-2">
@@ -48,7 +47,7 @@ const errorMsg = ref('')
 const successMsg = ref('')
 
 const today = new Date().toISOString().split('T')[0]
-const form = ref({ equipment_id: null, user_id: null, loan_date: today, purpose: '' })
+const form = ref({ equipment_id: null, borrower_user_id: null, loan_date: today })
 
 const availableEquipment = computed(() => equipmentStore.items.filter((e) => e.status === 'available'))
 
@@ -59,12 +58,11 @@ async function handleSubmit() {
   try {
     await loanStore.create({
       equipment_id: form.value.equipment_id,
-      user_id: form.value.user_id,
+      borrower_user_id: form.value.borrower_user_id,
       loan_date: form.value.loan_date,
-      purpose: form.value.purpose || undefined,
     })
     successMsg.value = '貸出を登録しました'
-    form.value = { equipment_id: null, user_id: null, loan_date: today, purpose: '' }
+    form.value = { equipment_id: null, borrower_user_id: null, loan_date: today }
     await equipmentStore.fetchAll()
   } catch (e) {
     errorMsg.value = e.response?.data?.detail || '登録に失敗しました'

@@ -1,24 +1,22 @@
 from pydantic import BaseModel
-from typing import Optional
+from datetime import datetime
 
 
 class EquipmentCreate(BaseModel):
+    management_number: str
     name: str
-    category: str
-    notes: Optional[str] = None
 
 
 class EquipmentUpdate(BaseModel):
-    name: Optional[str] = None
-    category: Optional[str] = None
-    notes: Optional[str] = None
+    name: str
 
 
 class EquipmentResponse(BaseModel):
     id: int
+    management_number: str
     name: str
-    category: str
     status: str
-    notes: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
 
     model_config = {"from_attributes": True}

@@ -30,7 +30,7 @@ const routes = [
     path: '/equipment',
     name: 'EquipmentList',
     component: () => import('../views/EquipmentListView.vue'),
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, requiresAdmin: true },
   },
   {
     path: '/equipment/create',

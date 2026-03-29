@@ -14,7 +14,7 @@
       >
         <template #item.status="{ item }">
           <v-chip :color="item.status === 'available' ? 'success' : 'warning'" size="small">
-            {{ item.status === 'available' ? '利用可能' : '貸出中' }}
+            {{ item.status === 'available' ? '貸出可' : '貸出中' }}
           </v-chip>
         </template>
         <template v-if="auth.isAdmin" #item.actions="{ item }">
@@ -57,10 +57,9 @@ const deleting = ref(false)
 
 const headers = computed(() => {
   const base = [
-    { title: '備品名', key: 'name' },
-    { title: 'カテゴリ', key: 'category' },
-    { title: 'ステータス', key: 'status' },
-    { title: '備考', key: 'notes' },
+    { title: '管理番号', key: 'management_number' },
+    { title: '品名', key: 'name' },
+    { title: '状態', key: 'status' },
   ]
   if (auth.isAdmin) base.push({ title: '操作', key: 'actions', sortable: false })
   return base

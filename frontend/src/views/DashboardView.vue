@@ -24,13 +24,19 @@
       </v-col>
       <v-col cols="12" class="mt-4">
         <v-card>
-          <v-card-title>現在の貸出一覧</v-card-title>
+          <v-card-title>備品一覧</v-card-title>
           <v-data-table
-            :headers="loanHeaders"
-            :items="loanStore.activeLoans"
-            :loading="loanStore.loading"
-            no-data-text="貸出中の備品はありません"
-          />
+            :headers="equipmentHeaders"
+            :items="equipmentRows"
+            :loading="equipmentStore.loading || loanStore.loading"
+            no-data-text="備品が登録されていません"
+          >
+            <template #item.status="{ item }">
+              <v-chip :color="item.status === 'available' ? 'success' : 'warning'" size="small">
+                {{ item.status === 'available' ? '貸出可' : '貸出中' }}
+              </v-chip>
+            </template>
+          </v-data-table>
         </v-card>
       </v-col>
     </v-row>
@@ -46,15 +52,26 @@ import { useLoanStore } from '../stores/loan.js'
 const equipmentStore = useEquipmentStore()
 const loanStore = useLoanStore()
 
-const onLoanCount = computed(() => equipmentStore.items.filter((e) => e.status === 'on_loan').length)
+const onLoanCount = computed(() => equipmentStore.items.filter((e) => e.status === 'loaned').length)
 const availableCount = computed(() => equipmentStore.items.filter((e) => e.status === 'available').length)
 
-const loanHeaders = [
-  { title: '備品名', key: 'equipment_name' },
-  { title: '利用者', key: 'user_name' },
+const equipmentHeaders = [
+  { title: '備品名', key: 'name' },
+  { title: '状態', key: 'status' },
+  { title: '借用者', key: 'borrower' },
   { title: '貸出日', key: 'loan_date' },
-  { title: '用途', key: 'purpose' },
 ]
+
+const equipmentRows = computed(() =>
+  equipmentStore.items.map((eq) => {
+    const loan = loanStore.activeLoans.find((l) => l.equipment_id === eq.id)
+    return {
+      ...eq,
+      borrower: loan ? loan.user_name : '—',
+      loan_date: loan ? loan.loan_date : '—',
+    }
+  }),
+)
 
 onMounted(async () => {
   await Promise.all([equipmentStore.fetchAll(), loanStore.fetchActive()])

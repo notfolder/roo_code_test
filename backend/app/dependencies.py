@@ -59,7 +59,7 @@ def get_current_user(
     user_id: int = payload.get("sub")
     if user_id is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-    user = db.query(User).filter(User.id == int(user_id), User.is_active == True).first()
+    user = db.query(User).filter(User.id == int(user_id)).first()
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
     return user

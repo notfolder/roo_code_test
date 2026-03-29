@@ -21,10 +21,14 @@ class EquipmentService:
         return eq
 
     def create_equipment(self, data: EquipmentCreate) -> Equipment:
+        if self.db.query(Equipment).filter(Equipment.management_number == data.management_number).first():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="管理番号が既に使用されています",
+            )
         eq = Equipment(
+            management_number=data.management_number,
             name=data.name,
-            category=data.category,
-            notes=data.notes,
             status="available",
         )
         result = self.repo.add(eq)
@@ -33,12 +37,7 @@ class EquipmentService:
 
     def update_equipment(self, equipment_id: int, data: EquipmentUpdate) -> Equipment:
         eq = self.get_equipment(equipment_id)
-        if data.name is not None:
-            eq.name = data.name
-        if data.category is not None:
-            eq.category = data.category
-        if data.notes is not None:
-            eq.notes = data.notes
+        eq.name = data.name
         self.db.commit()
         self.db.refresh(eq)
         return eq
@@ -47,8 +46,8 @@ class EquipmentService:
         eq = self.get_equipment(equipment_id)
         if eq.status != "available":
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Cannot delete equipment that is on loan",
+                status_code=status.HTTP_409_CONFLICT,
+                detail="貸出中の備品は削除できません",
             )
         self.repo.delete(eq)
         self.db.commit()
