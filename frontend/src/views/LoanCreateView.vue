@@ -11,6 +11,28 @@
           label="備品"
           required
         />
+        <div v-if="form.equipment_id" class="mb-3">
+          <div class="text-subtitle-2 mb-1">選択した備品の予約一覧</div>
+          <v-table density="compact" v-if="reservationStore.pendingReservations.length > 0">
+            <thead>
+              <tr>
+                <th>予約者</th>
+                <th>貸出開始予定日</th>
+                <th>返却予定日</th>
+                <th>状態</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="r in reservationStore.pendingReservations" :key="r.id">
+                <td>{{ r.user_name }}</td>
+                <td>{{ r.planned_start_date }}</td>
+                <td>{{ r.planned_return_date }}</td>
+                <td>予約中</td>
+              </tr>
+            </tbody>
+          </v-table>
+          <v-alert v-else density="compact" type="info" variant="tonal">この備品の予約はありません</v-alert>
+        </div>
         <v-select
           v-model="form.borrower_user_id"
           :items="userStore.users"
@@ -32,15 +54,17 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import AppLayout from './AppLayout.vue'
 import { useEquipmentStore } from '../stores/equipment.js'
 import { useUserStore } from '../stores/user.js'
 import { useLoanStore } from '../stores/loan.js'
+import { useReservationStore } from '../stores/reservation.js'
 
 const equipmentStore = useEquipmentStore()
 const userStore = useUserStore()
 const loanStore = useLoanStore()
+const reservationStore = useReservationStore()
 
 const loading = ref(false)
 const errorMsg = ref('')
@@ -50,6 +74,17 @@ const today = new Date().toISOString().split('T')[0]
 const form = ref({ equipment_id: null, borrower_user_id: null, loan_date: today })
 
 const availableEquipment = computed(() => equipmentStore.items.filter((e) => e.status === 'available'))
+
+watch(
+  () => form.value.equipment_id,
+  async (newId) => {
+    if (newId) {
+      await reservationStore.fetchPendingByEquipment(newId)
+    } else {
+      reservationStore.pendingReservations = []
+    }
+  },
+)
 
 async function handleSubmit() {
   errorMsg.value = ''

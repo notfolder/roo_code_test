@@ -56,6 +56,18 @@ const routes = [
     component: () => import('../views/UserFormView.vue'),
     meta: { requiresAuth: true, requiresAdmin: true },
   },
+  {
+    path: '/reservations',
+    name: 'ReservationList',
+    component: () => import('../views/ReservationListView.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/reservations/create',
+    name: 'ReservationCreate',
+    component: () => import('../views/ReservationCreateView.vue'),
+    meta: { requiresAuth: true },
+  },
 ]
 
 const router = createRouter({

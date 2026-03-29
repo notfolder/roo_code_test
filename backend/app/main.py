@@ -6,6 +6,7 @@ from app.routers.auth import router as auth_router
 from app.routers.users import router as users_router
 from app.routers.equipment import router as equipment_router
 from app.routers.loans import router as loans_router
+from app.routers.reservation import router as reservation_router
 
 app = FastAPI(title="備品管理システム", version="1.0.0")
 
@@ -28,6 +29,7 @@ app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
 app.include_router(users_router, prefix="/api/users", tags=["users"])
 app.include_router(equipment_router, prefix="/api/equipment", tags=["equipment"])
 app.include_router(loans_router, prefix="/api/loans", tags=["loans"])
+app.include_router(reservation_router, prefix="/api/reservations", tags=["reservations"])
 
 
 @app.get("/api/health")

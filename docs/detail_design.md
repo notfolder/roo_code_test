@@ -108,6 +108,7 @@ flowchart TD
 | users | ユーザー | ログインユーザー（管理者・一般社員）を管理する |
 | equipment | 備品 | 貸出対象の備品を管理する |
 | loan_records | 貸出記録 | 貸出・返却の履歴を管理する |
+| reservations | 予約 | 貸出予約を管理する |
 
 ### テーブル定義
 
@@ -145,6 +146,18 @@ flowchart TD
 | status | VARCHAR(10) | NOT NULL, DEFAULT 'active', CHECK(status IN ('active','returned')) | 状態 |
 | created_at | TIMESTAMP | NOT NULL, DEFAULT NOW() | 作成日時 |
 
+#### reservations テーブル
+
+| カラム名 | データ型 | 制約 | 説明 |
+|---------|---------|------|------|
+| id | SERIAL | PK | 予約ID（自動採番） |
+| equipment_id | INTEGER | NOT NULL, FK → equipment.id | 予約対象備品ID |
+| user_id | INTEGER | NOT NULL, FK → users.id | 予約者ユーザーID |
+| planned_start_date | DATE | NOT NULL | 貸出開始予定日 |
+| planned_return_date | DATE | NOT NULL | 返却予定日 |
+| status | VARCHAR(20) | NOT NULL, DEFAULT 'pending', CHECK(status IN ('pending','cancelled','loaned')) | 状態 |
+| created_at | TIMESTAMP | NOT NULL, DEFAULT NOW() | 作成日時 |
+
 ### ER図
 
 ```mermaid
@@ -174,9 +187,20 @@ erDiagram
         varchar status
         timestamp created_at
     }
+    reservations {
+        int id PK
+        int equipment_id FK
+        int user_id FK
+        date planned_start_date
+        date planned_return_date
+        varchar status
+        timestamp created_at
+    }
 
     users ||--o{ loan_records : "借用者として登録"
     equipment ||--o{ loan_records : "貸出対象として記録"
+    users ||--o{ reservations : "予約者として登録"
+    equipment ||--o{ reservations : "予約対象として記録"
 ```
 
 ### データ整合性制約
@@ -185,13 +209,17 @@ erDiagram
 |---------|------|
 | PK制約 | 各テーブルのid列（自動採番） |
 | UK制約 | users.login_id, equipment.management_number |
-| FK制約 | loan_records.equipment_id → equipment.id, loan_records.user_id → users.id |
-| CHECK制約 | equipment.status IN ('available','loaned'), users.role IN ('admin','general'), loan_records.status IN ('active','returned') |
+| FK制約 | loan_records.equipment_id → equipment.id, loan_records.user_id → users.id, reservations.equipment_id → equipment.id, reservations.user_id → users.id |
+| CHECK制約 | equipment.status IN ('available','loaned'), users.role IN ('admin','general'), loan_records.status IN ('active','returned'), reservations.status IN ('pending','cancelled','loaned') |
 | 業務制約（アプリ層） | 貸出登録時: equipment.status = 'available' であること |
 | 業務制約（アプリ層） | 返却登録時: loan_records.status = 'active' であること |
 | 業務制約（アプリ層） | 備品削除時: equipment.status = 'available' であること |
 | 業務制約（アプリ層） | ユーザー削除時: 対象ユーザーのactiveな貸出記録が存在しないこと |
 | 業務制約（アプリ層） | 返却日: return_date >= loan_date であること |
+| 業務制約（アプリ層） | 予約登録時: planned_start_date ≥ 予約登録日（当日）であること |
+| 業務制約（アプリ層） | 予約登録時: planned_return_date ≥ planned_start_date であること |
+| 業務制約（アプリ層） | 予約登録時: 同一equipment_idに対してstatusが'pending'の予約の中に、planned_start_date～planned_return_dateと重複するものが存在しないこと |
+| 業務制約（アプリ層） | 予約キャンセル時: reservations.status = 'pending' であること |
 
 ---
 
@@ -202,13 +230,15 @@ erDiagram
 | 画面ID | 画面名 | URL | 利用者 |
 |--------|--------|-----|--------|
 | S1 | ログイン画面 | /login | 全ユーザー（未認証） |
-| S2 | 貸出状況一覧画面 | / | 全ユーザー（認証済み） |
-| S3 | 貸出登録画面 | /loans/create | 管理者のみ |
+| S2 | 貸出状況一覧画面（変更） | / | 全ユーザー（認証済み） |
+| S3 | 貸出登録画面（変更） | /loans/create | 管理者のみ |
 | S4 | 返却登録画面 | /loans/return | 管理者のみ |
 | S5 | 備品一覧・管理画面 | /equipment | 管理者のみ |
 | S6 | 備品登録・編集画面 | /equipment/create, /equipment/:id/edit | 管理者のみ |
 | S7 | ユーザー管理画面 | /users | 管理者のみ |
 | S8 | ユーザー登録画面 | /users/create | 管理者のみ |
+| S9 | 予約登録画面 | /reservations/create | 全ユーザー（認証済み） |
+| S10 | 予約一覧画面 | /reservations | 全ユーザー（認証済み） |
 
 ### 各画面モックアップ（AA）
 
@@ -230,59 +260,68 @@ erDiagram
 +--------------------------------------------------+
 ```
 
-#### S2 貸出状況一覧画面（管理者）
+#### S2 貸出状況一覧画面（管理者）— 変更後
 
 ```
-+------------------------------------------------------------+
-|  備品管理システム                  管理者:田中  [ログアウト]  |
-+------------------------------------------------------------+
-|  [貸出登録]  [返却登録]  [備品管理]  [ユーザー管理]          |
-+------------------------------------------------------------+
++------------------------------------------------------------------+
+|  備品管理システム                            管理者:田中  [ログアウト]  |
++------------------------------------------------------------------+
+|  [貸出登録]  [返却登録]  [予約一覧]  [予約登録]           |
+|  [備品管理]  [ユーザー管理]                                   |
++------------------------------------------------------------------+
 |  貸出状況一覧                                              |
-|  +------------+--------+----------+------------+          |
-|  | 備品名      | 状態   | 借用者   | 貸出日      |          |
-|  +------------+--------+----------+------------+          |
-|  | ノートPC    | 貸出中 | 山田太郎  | 2026/03/01 |          |
-|  | プロジェクタ | 貸出可 |    -     |     -      |          |
-|  | カメラ      | 貸出可 |    -     |     -      |          |
-|  | 延長コード  | 貸出可 |    -     |     -      |          |
-|  +------------+--------+----------+------------+          |
-+------------------------------------------------------------+
+|  +------------+--------+----------+------------+                |
+|  | 備品名      | 状態   | 借用者   | 貸出日      |                |
+|  +------------+--------+----------+------------+                |
+|  | ノートPC    | 貸出中 | 山田太郎  | 2026/03/01 |                |
+|  | プロジェクタ | 貸出可 |    -     |     -      |                |
+|  | カメラ      | 貸出可 |    -     |     -      |                |
+|  +------------+--------+----------+------------+                |
++------------------------------------------------------------------+
 ```
 
-#### S2 貸出状況一覧画面（一般社員）
+#### S2 貸出状況一覧画面（一般社員）— 変更後
 
 ```
-+------------------------------------------------------------+
-|  備品管理システム                  社員:山田   [ログアウト]  |
-+------------------------------------------------------------+
++------------------------------------------------------------------+
+|  備品管理システム                            社員:山田   [ログアウト]  |
++------------------------------------------------------------------+
+|  [予約一覧]  [予約登録]                                    |
++------------------------------------------------------------------+
 |  貸出状況一覧                                              |
-|  +------------+--------+----------+------------+          |
-|  | 備品名      | 状態   | 借用者   | 貸出日      |          |
-|  +------------+--------+----------+------------+          |
-|  | ノートPC    | 貸出中 | 山田太郎  | 2026/03/01 |          |
-|  | プロジェクタ | 貸出可 |    -     |     -      |          |
-|  +------------+--------+----------+------------+          |
-+------------------------------------------------------------+
+|  +------------+--------+----------+------------+                |
+|  | 備品名      | 状態   | 借用者   | 貸出日      |                |
+|  +------------+--------+----------+------------+                |
+|  | ノートPC    | 貸出中 | 山田太郎  | 2026/03/01 |                |
+|  | プロジェクタ | 貸出可 |    -     |     -      |                |
+|  +------------+--------+----------+------------+                |
++------------------------------------------------------------------+
 ```
 
-#### S3 貸出登録画面
+#### S3 貸出登録画面— 変更後
 
 ```
-+--------------------------------------------+
-|  貸出登録                  [← 一覧に戻る]   |
-+--------------------------------------------+
-|                                            |
-|  備品選択   [ プロジェクタ          ▼ ]     |
-|             ※ 貸出可の備品のみ表示           |
-|                                            |
-|  借用者     [ 山田太郎              ▼ ]     |
-|                                            |
-|  貸出日     [ 2026/03/29               ]   |
-|                                            |
-|          [キャンセル]  [  登録する  ]        |
-|                                            |
-+--------------------------------------------+
++----------------------------------------------------------+
+|  貸出登録                          [← 一覧に戻る]         |
++----------------------------------------------------------+
+|                                                          |
+|  備品選択   [ プロジェクタ               ▼ ]             |
+|             ※ 貸出可の備品のみ表示                        |
+|                                                          |
+|  選択した備品の予約一覧                                   |
+|  +----------+----------------+------------+--------+    |
+|  | 予約者    | 貸出開始予定日 | 返却予定日  | 状態  |    |
+|  +----------+----------------+------------+--------+    |
+|  | 山田太郎  | 2026/04/10    | 2026/04/12 | 予約中 |    |
+|  +----------+----------------+------------+--------+    |
+|  ※ 予約中の予約がない場合は「予約なし」と表示              |
+|                                                          |
+|  借用者     [ 山田太郎                   ▼ ]             |
+|                                                          |
+|  貸出日     [ 2026/04/10                    ]            |
+|                                                          |
+|          [キャンセル]      [  登録する  ]                  |
++----------------------------------------------------------+
 ```
 
 #### S4 返却登録画面
@@ -375,6 +414,59 @@ erDiagram
 +-----------------------------------------------+
 ```
 
+#### S9 予約登録画面（追加）
+
+```
++---------------------------------------------+
+|  予約登録               [← 一覧に戻る]        |
++---------------------------------------------+
+|                                             |
+|  備品選択   [ ノートPC                 ▼ ]   |
+|             ※ 全備品から選択可                |
+|                                             |
+|  貸出開始予定日  [ 2026/04/10          ]     |
+|             ※ 本日以降を入力してください  |
+|                                             |
+|  返却予定日      [ 2026/04/12          ]     |
+|                                             |
+|          [キャンセル]   [  予約する  ]        |
+|                                             |
+|  ※ 予約期間が他の予約と重複する場合は登録不可  |
++---------------------------------------------+
+```
+
+#### S10 予約一覧画面（管理者表示）（追加）
+
+```
++------------------------------------------------------------------+
+|  予約一覧                             [+ 予約を登録する]           |
++------------------------------------------------------------------+
+|  +----------+-----------+------------+------------+--------+-----+
+|  | 備品名    | 予約者     | 貸出開始日  | 返却予定日  | 状態  | 操作|
+|  +----------+-----------+------------+------------+--------+-----+
+|  | ノートPC  | 山田太郎   | 2026/04/10 | 2026/04/12 | 予約中 |[取消]|
+|  | カメラ    | 鈴木花子   | 2026/04/15 | 2026/04/16 | 予約中 |[取消]|
+|  | ノートPC  | 田中一郎   | 2026/03/01 | 2026/03/03 | 貸出済 |  -  |
+|  +----------+-----------+------------+------------+--------+-----+
+|  ※ 管理者は全ユーザーの予約を表示                               |
++------------------------------------------------------------------+
+```
+
+#### S10 予約一覧画面（一般社員表示）（追加）
+
+```
++------------------------------------------------------------------+
+|  予約一覧                             [+ 予約を登録する]           |
++------------------------------------------------------------------+
+|  +----------+------------+------------+--------+------+         |
+|  | 備品名    | 貸出開始日  | 返却予定日  | 状態  | 操作  |         |
+|  +----------+------------+------------+--------+------+         |
+|  | ノートPC  | 2026/04/10 | 2026/04/12 | 予約中 |[取消]|         |
+|  +----------+------------+------------+--------+------+         |
+|  ※ 自分の予約のみ表示                                           |
++------------------------------------------------------------------+
+```
+
 ### 画面遷移図
 
 ```mermaid
@@ -386,12 +478,18 @@ stateDiagram-v2
     S2 --> S4 : 返却登録ボタン（管理者のみ）
     S2 --> S5 : 備品管理ボタン（管理者のみ）
     S2 --> S7 : ユーザー管理ボタン（管理者のみ）
+    S2 --> S9 : 予約登録ボタン（全ユーザー）
+    S2 --> S10 : 予約一覧ボタン（全ユーザー）
     S3 --> S2 : 登録完了 / キャンセル
     S4 --> S2 : 登録完了 / キャンセル
     S5 --> S6 : 備品登録ボタン / 編集ボタン
     S6 --> S5 : 保存完了 / キャンセル
     S7 --> S8 : ユーザー登録ボタン
     S8 --> S7 : 保存完了 / キャンセル
+    S9 --> S2 : 登録完了
+    S9 --> S10 : キャンセルボタン
+    S10 --> S2 : 戻るボタン
+    S10 --> S9 : 予約を登録するボタン
     S1 --> S2 : 認証済みで /login アクセス時はリダイレクト
     S2 --> S1 : 未認証で認証必須ページにアクセス時はリダイレクト
 ```
@@ -578,6 +676,60 @@ stateDiagram-v2
 | 404 | ユーザーが存在しない |
 | 409 | ユーザーが貸出中のため削除不可 |
 
+#### 予約API（追加）
+
+| メソッド | パス | 認証 | 権限 | 概要 |
+|---------|------|------|------|------|
+| POST | /api/reservations/ | 必要 | 全役割 | 予約登録 |
+| GET | /api/reservations/ | 必要 | 全役割 | 予約一覧取得（一般社員は自身のみ、管理者は全件） |
+| GET | /api/reservations/pending/{equipment_id} | 必要 | 管理者のみ | 指定備品の予約中予約一覧取得 |
+| PUT | /api/reservations/{id}/cancel | 必要 | 全役割（所有者本人または管理者のみ） | 予約キャンセル |
+
+**POST /api/reservations/**
+
+- リクエストボディ
+
+| フィールド | 型 | 必須 | バリデーション |
+|-----------|-----|------|--------------|
+| equipment_id | integer | ○ | 存在する備品のID |
+| planned_start_date | date | ○ | ISO 8601形式。本日以降の日付であること |
+| planned_return_date | date | ○ | ISO 8601形式。planned_start_date以降の日付であること |
+
+- レスポンス
+
+| ステータス | 内容 |
+|-----------|------|
+| 201 | `{ id, equipment_id, user_id, planned_start_date, planned_return_date, status: "pending", created_at }` |
+| 401 | 未認証 |
+| 404 | 備品が存在しない |
+| 409 | 同一備品に期間が重複する予約中の予約が存在する |
+| 422 | バリデーションエラー（過去日付、返却日 < 開始日） |
+
+**GET /api/reservations/**
+
+- クエリパラメータ: なし
+- バックエンドでロールにより自動フィルタリング（一般社員は自身のuser_idで絞り込み、管理者は全件）
+- レスポンス200: `[ { id, equipment_id, equipment_name, user_id, user_name, planned_start_date, planned_return_date, status, created_at } ]`
+
+**GET /api/reservations/pending/{equipment_id}**
+
+- レスポンス200: `[ { id, equipment_id, equipment_name, user_id, user_name, planned_start_date, planned_return_date, status, created_at } ]`
+
+**PUT /api/reservations/{id}/cancel**
+
+- リクエストボディ: なし
+- 認可: 一般社員は自身が登録した予約のみキャンセル可。管理者は全予約のキャンセル可。
+
+- レスポンス
+
+| ステータス | 内容 |
+|-----------|------|
+| 200 | `{ id, equipment_id, user_id, planned_start_date, planned_return_date, status: "cancelled" }` |
+| 401 | 未認証 |
+| 403 | 他ユーザーの予約を一般社員がキャンセルしようとした |
+| 404 | 予約が存在しない |
+| 409 | 既にキャンセル済みまたは貸出済みのためキャンセル不可 |
+
 ### 外部システム連携
 
 なし（要件定義書に外部連携なし）
@@ -689,14 +841,87 @@ sequenceDiagram
     end
 ```
 
+### 予約登録処理フロー
+
+```mermaid
+sequenceDiagram
+    actor User as ユーザー（全役割）
+    participant F as フロントエンド
+    participant B as バックエンド
+    participant DB as PostgreSQL
+
+    User->>F: 備品・貸出開始予定日・返却予定日を入力し予約するボタン押下
+    F->>B: POST /api/reservations/（Bearerトークン付き）
+    B->>B: JWTトークン検証
+    B->>B: planned_start_date ≥ 本日、planned_return_date ≥ planned_start_date のバリデーション
+    alt バリデーション失敗
+        B-->>F: 422 Unprocessable Entity
+        F-->>User: バリデーションエラー表示
+    end
+    B->>DB: BEGIN TRANSACTION
+    B->>DB: equipmentテーブルから備品をSELECTで存在確認
+    DB-->>B: 備品レコード
+    alt 備品が存在しない
+        B->>DB: ROLLBACK
+        B-->>F: 404 Not Found
+        F-->>User: エラーメッセージ表示
+    end
+    B->>DB: reservationsテーブルから同一equipment_idでstatusが'pending'の予約のうち期間が重複するもの(SELECT FOR UPDATE)
+    DB-->>B: 重複予約レコード（ゼロ件または1件以上）
+    alt 重複する予約が存在する
+        B->>DB: ROLLBACK
+        B-->>F: 409 Conflict
+        F-->>User: エラーメッセージ表示
+    else 重複予約なし
+        B->>DB: reservationsにINSERT（status='pending', user_id=ログインユーザーのid）
+        B->>DB: COMMIT
+        B-->>F: 201 Created
+        F-->>User: 成功メッセージ表示・S10（予約一覧）へ遷移
+    end
+```
+
+### 予約キャンセル処理フロー
+
+```mermaid
+sequenceDiagram
+    actor User as ユーザー（全役割）
+    participant F as フロントエンド
+    participant B as バックエンド
+    participant DB as PostgreSQL
+
+    User->>F: 取消ボタン押下
+    F->>B: PUT /api/reservations/{id}/cancel（Bearerトークン付き）
+    B->>B: JWTトークン検証
+    B->>DB: BEGIN TRANSACTION
+    B->>DB: reservationsテーブルから対象レコードをSELECT FOR UPDATE
+    DB-->>B: 予約レコード
+    alt 予約が存在しない
+        B->>DB: ROLLBACK
+        B-->>F: 404 Not Found
+    else 一般社員かつ予約者が自分でない
+        B->>DB: ROLLBACK
+        B-->>F: 403 Forbidden
+    else status が 'cancelled' または 'loaned'
+        B->>DB: ROLLBACK
+        B-->>F: 409 Conflict
+    else 正常
+        B->>DB: reservationsのstatusを'cancelled'にUPDATE
+        B->>DB: COMMIT
+        B-->>F: 200 OK
+        F-->>User: 取消完了メッセージ表示・一覧を更新
+    end
+```
+
 ### トランザクション設計
 
 | 処理 | トランザクション境界 | ロールバック条件 |
 |------|-------------------|----------------|
-| 貸出登録 | 備品ステータス確認→貸出記録INSERT→備品ステータスUPDATEを1トランザクション内で実行 | 備品が存在しない、備品が貸出中、DB例外 |
+| 貸出登録 | 備品ステータス確認→貸出記録INSERT→備品ステータスUPDATE→対応予約のloaned更新を1トランザクション内で実行 | 備品が存在しない、備品が貸出中、DB例外 |
 | 返却登録 | 貸出記録確認→貸出記録UPDATE→備品ステータスUPDATEを1トランザクション内で実行 | 記録が存在しない、既に返却済み、return_date不正、DB例外 |
 | 備品削除 | 備品ステータス確認→DELETE を1トランザクション内で実行 | 備品が存在しない、備品が貸出中、DB例外 |
 | ユーザー削除 | アクティブ貸出確認→DELETE を1トランザクション内で実行 | ユーザーが存在しない、アクティブな貸出あり、DB例外 |
+| 予約登録 | 重複予約チェック（SELECT FOR UPDATE）→reservationsにINSERTを1トランザクション内で実行 | 備品が存在しない、重複する予約が存在する、バリデーション失敗、DB例外 |
+| 予約キャンセル | 予約取得（SELECT FOR UPDATE）→statusをcancelledにUPDATEを1トランザクション内で実行 | 予約が存在しない、権限なし、既にcancelled/loaned、DB例外 |
 
 ### 排他制御
 
@@ -704,8 +929,10 @@ sequenceDiagram
 |------|------------|------|
 | 貸出登録 | 悲観的ロック（SELECT FOR UPDATE） | equipmentテーブルの対象行 |
 | 返却登録 | 悲観的ロック（SELECT FOR UPDATE） | loan_recordsテーブルの対象行 |
+| 予約登録 | 悲観的ロック（SELECT FOR UPDATE） | reservationsテーブルの同一equipment_idかつstatus='pending'の行（重複チェック時） |
+| 予約キャンセル | 悲観的ロック（SELECT FOR UPDATE） | reservationsテーブルの対象行 |
 
-同一備品への同時貸出リクエストが発生した場合、先に取得したトランザクションが処理を完了し、後のトランザクションは409エラーで応答する。
+同一備品への同時貸出リクエストが発生した場合、先に取得したトランザクションが処理を完了し、後のトランザクションは409エラーで応答する。同一備品への同時予約リクエストが発生した場合も同様。
 
 ### システム初期化処理
 
@@ -746,7 +973,10 @@ sequenceDiagram
 | AuthService | サービス | 認証・JWTトークン管理 |
 | UserService | サービス | ユーザー業務ロジック |
 | EquipmentService | サービス | 備品業務ロジック |
-| LoanService | サービス | 貸出業務ロジック |
+| LoanService | サービス | 貸出業務ロジック（予約自動更新処理を追加）（変更） |
+| ReservationModel | ORMモデル | reservationsテーブルのORM定義 |
+| ReservationRepository | リポジトリ | 予約固有のデータアクセス |
+| ReservationService | サービス | 予約業務ロジック |
 | CommonDependencies | 依存関係 | FastAPI依存性注入（DBセッション、認証、管理者チェック）の共通定義 |
 
 ### バックエンドスキーマ（Pydantic）一覧
@@ -763,8 +993,8 @@ sequenceDiagram
 | LoanResponse | 貸出記録APIレスポンス |
 | UserCreate | ユーザー登録リクエスト |
 | UserResponse | ユーザーAPIレスポンス |
-
-### フロントエンドモジュール一覧
+| ReservationCreate | 予約登録リクエスト |
+| ReservationResponse | 予約APIレスポンス |
 
 | モジュール名 | 区分 | 役割 |
 |------------|------|------|
@@ -782,6 +1012,12 @@ sequenceDiagram
 | EquipmentFormView | ビュー | S6 備品登録・編集画面 |
 | UserListView | ビュー | S7 ユーザー管理画面 |
 | UserFormView | ビュー | S8 ユーザー登録画面 |
+| ReservationCreateView | ビュー | S9 予約登録画面 |
+| ReservationListView | ビュー | S10 予約一覧画面（管理者は全件、一般社員は自身のみ） |
+| useReservationStore | Piniaストア | 予約一覧状態の管理、予約登録・キャンセル操作のAPI呼び出し |
+| ReservationCreateView | ビュー | S9 予約登録画面 |
+| ReservationListView | ビュー | S10 予約一覧画面（管理者は全件、一般社員は自身のみ） |
+| useReservationStore | Piniaストア | 予約一覧状態の管理、予約登録・キャンセル操作のAPI呼び出し |
 
 ### クラス図（バックエンド）
 
@@ -847,10 +1083,26 @@ classDiagram
     class LoanService {
         -loan_repo LoanRecordRepository
         -equipment_repo EquipmentRepository
+        -reservation_repo ReservationRepository
         +get_all_loans()
         +create_loan(data)
         +return_loan(id, return_date)
     }
+    class ReservationRepository {
+        +get_by_user_id(user_id)
+        +get_pending_by_equipment(equipment_id)
+        +check_overlap(equipment_id, start_date, end_date)
+        +cancel(id)
+        +mark_as_loaned(equipment_id)
+    }
+    class ReservationService {
+        -reservation_repo ReservationRepository
+        -equipment_repo EquipmentRepository
+        +get_reservations(current_user)
+        +create_reservation(data, current_user)
+        +cancel_reservation(id, current_user)
+    }
+    BaseRepository <|-- ReservationRepository
 
     AuthService --> UserRepository
     UserService --> UserRepository
@@ -858,6 +1110,9 @@ classDiagram
     EquipmentService --> EquipmentRepository
     LoanService --> LoanRecordRepository
     LoanService --> EquipmentRepository
+    LoanService --> ReservationRepository
+    ReservationService --> ReservationRepository
+    ReservationService --> EquipmentRepository
 ```
 
 ### エンティティ・画面・API・クラス対応表
@@ -868,6 +1123,7 @@ classDiagram
 | 貸出記録 | S2, S3, S4 | /api/loans/ | LoanRecordModel | LoanRecordRepository | LoanService |
 | ユーザー | S3, S7, S8 | /api/users/ | UserModel | UserRepository | UserService |
 | 認証 | S1 | /api/auth/login | UserModel | UserRepository | AuthService |
+| 予約 | S9, S10, S3（参照のみ） | /api/reservations/ | ReservationModel | ReservationRepository | ReservationService |
 
 ---
 
@@ -956,6 +1212,8 @@ apiClientのaxiosレスポンスインターセプターにて以下を共通処
 | XSS対策 | Vueのテンプレートはデフォルトでエスケープする。v-htmlディレクティブは使用しない。 |
 | 初期パスワード | 初期管理者ユーザーのパスワードは起動後に変更することをREADME.mdに明記する。ただし、現バージョンではパスワード変更機能は持たないため、ユーザー削除・再登録で対応する。 |
 | JWTシークレット | 環境変数(SECRET_KEY)で管理し、docker-compose.ymlのenvまたは.envファイルで設定する。ソースコードにハードコードしない。 |
+| 予約キャンセルの認可 | バックエンドのReservationServiceにて、一般社員が他ユーザーの予約に対してキャンセル操作を行った場合は403を返す。フロントエンドではS10の「取消」ボタンを、一般社員の場合は自身の予約にのみ表示する。バックエンドAPIでも必ず認可チェックを行い、フロントエンドのみへの依存は禁止する。 |
+| 予約一覧の情報漏えい防止 | GET /api/reservations/ はバックエンドにてロールを確認し、一般社員には自身のuser_idで絞り込んだ結果のみ返す。フロントエンドで後からフィルタリングする方式は採用しない。 |
 
 ---
 
@@ -1006,44 +1264,51 @@ apiClientのaxiosレスポンスインターセプターにて以下を共通処
 │       │   ├── __init__.py
 │       │   ├── user.py
 │       │   ├── equipment.py
-│       │   └── loan_record.py
+│       │   ├── loan_record.py
+│       │   └── reservation.py
 │       ├── schemas/
 │       │   ├── __init__.py
 │       │   ├── auth.py
 │       │   ├── user.py
 │       │   ├── equipment.py
-│       │   └── loan_record.py
+│       │   ├── loan_record.py
+│       │   └── reservation.py
 │       ├── repositories/
 │       │   ├── __init__.py
 │       │   ├── base.py
 │       │   ├── user.py
 │       │   ├── equipment.py
-│       │   └── loan_record.py
+│       │   ├── loan_record.py
+│       │   └── reservation.py
 │       ├── services/
 │       │   ├── __init__.py
 │       │   ├── auth.py
 │       │   ├── user.py
 │       │   ├── equipment.py
-│       │   └── loan.py
+│       │   ├── loan.py
+│       │   └── reservation.py
 │       └── routers/
 │           ├── __init__.py
 │           ├── auth.py
 │           ├── user.py
 │           ├── equipment.py
-│           └── loan.py
+│           ├── loan.py
+│           └── reservation.py
 └── tests/
     ├── unit/
     │   └── backend/
     │       ├── test_auth_service.py
     │       ├── test_equipment_service.py
     │       ├── test_loan_service.py
-    │       └── test_user_service.py
+    │       ├── test_user_service.py
+    │       └── test_reservation_service.py
     └── integration/
         └── backend/
             ├── test_auth_api.py
             ├── test_equipment_api.py
             ├── test_loan_api.py
-            └── test_user_api.py
+            ├── test_user_api.py
+            └── test_reservation_api.py
 ```
 
 ### ファイル一覧
@@ -1058,22 +1323,27 @@ apiClientのaxiosレスポンスインターセプターにて以下を共通処
 | app/models/user.py | UserModel |
 | app/models/equipment.py | EquipmentModel |
 | app/models/loan_record.py | LoanRecordModel |
+| app/models/reservation.py | ReservationModel |
 | app/schemas/auth.py | LoginRequest, TokenResponse |
 | app/schemas/user.py | UserCreate, UserResponse |
 | app/schemas/equipment.py | EquipmentCreate, EquipmentUpdate, EquipmentResponse |
 | app/schemas/loan_record.py | LoanCreate, LoanReturn, LoanResponse |
+| app/schemas/reservation.py | ReservationCreate, ReservationResponse |
 | app/repositories/base.py | BaseRepository |
 | app/repositories/user.py | UserRepository |
 | app/repositories/equipment.py | EquipmentRepository |
 | app/repositories/loan_record.py | LoanRecordRepository |
+| app/repositories/reservation.py | ReservationRepository |
 | app/services/auth.py | AuthService |
 | app/services/user.py | UserService |
 | app/services/equipment.py | EquipmentService |
-| app/services/loan.py | LoanService |
+| app/services/loan.py | LoanService（予約自動更新処理を追加）（変更） |
+| app/services/reservation.py | ReservationService |
 | app/routers/auth.py | /api/auth のルーター |
 | app/routers/user.py | /api/users のルーター |
 | app/routers/equipment.py | /api/equipment のルーター |
 | app/routers/loan.py | /api/loans のルーター |
+| app/routers/reservation.py | /api/reservations のルーター |
 
 #### フロントエンド
 
@@ -1085,6 +1355,7 @@ apiClientのaxiosレスポンスインターセプターにて以下を共通処
 | src/stores/equipment.js | useEquipmentStore |
 | src/stores/loan.js | useLoanStore |
 | src/stores/user.js | useUserStore |
+| src/stores/reservation.js | useReservationStore |
 | src/views/LoginView.vue | S1 ログイン画面コンポーネント |
 | src/views/DashboardView.vue | S2 貸出状況一覧画面コンポーネント |
 | src/views/LoanCreateView.vue | S3 貸出登録画面コンポーネント |
@@ -1093,6 +1364,8 @@ apiClientのaxiosレスポンスインターセプターにて以下を共通処
 | src/views/EquipmentFormView.vue | S6 備品登録・編集画面コンポーネント |
 | src/views/UserListView.vue | S7 ユーザー管理画面コンポーネント |
 | src/views/UserFormView.vue | S8 ユーザー登録画面コンポーネント |
+| src/views/ReservationCreateView.vue | S9 予約登録画面コンポーネント |
+| src/views/ReservationListView.vue | S10 予約一覧画面コンポーネント |
 
 ### 共通処理の共通化方針
 
@@ -1168,6 +1441,22 @@ apiClientのaxiosレスポンスインターセプターにて以下を共通処
 | UT-20 | UserService.delete_user | アクティブ貸出のないユーザーが削除されること | 正常 |
 | UT-21 | UserService.delete_user | アクティブ貸出中のユーザーで409例外が発生すること | 異常 |
 | UT-22 | UserService.delete_user | 存在しないIDで404例外が発生すること | 異常 |
+| UT-23 | ReservationService.create_reservation | 正常な入力で予約が作成されること | 正常 |
+| UT-24 | ReservationService.create_reservation | planned_start_dateが過去日付で422例外が発生すること | 異常 |
+| UT-25 | ReservationService.create_reservation | planned_return_date < planned_start_dateで422例外が発生すること | 異常 |
+| UT-26 | ReservationService.create_reservation | 存在しないequipment_idで404例外が発生すること | 異常 |
+| UT-27 | ReservationService.create_reservation | 重複する期間の予約が存在する場合に409例外が発生すること | 異常 |
+| UT-28 | ReservationService.create_reservation | 重複しない期間の予約が存在する場合は正常に作成されること | 正常 |
+| UT-29 | ReservationService.cancel_reservation | 予約者本人（一般社員）が自身の予約をキャンセルできること | 正常 |
+| UT-30 | ReservationService.cancel_reservation | 管理者が任意の予約をキャンセルできること | 正常 |
+| UT-31 | ReservationService.cancel_reservation | 一般社員が他ユーザーの予約のキャンセルで403例外が発生すること | 異常 |
+| UT-32 | ReservationService.cancel_reservation | 存在しないIDで404例外が発生すること | 異常 |
+| UT-33 | ReservationService.cancel_reservation | 既にキャンセル済みの予約で409例外が発生すること | 異常 |
+| UT-34 | ReservationService.cancel_reservation | 貸出済みの予約で409例外が発生すること | 異常 |
+| UT-35 | ReservationService.get_reservations | 管理者の場合は全予約が返ること | 正常 |
+| UT-36 | ReservationService.get_reservations | 一般社員の場合は自身の予約のみが返ること | 正常 |
+| UT-37 | LoanService.create_loan | 貸出登録成功時に対応するpending予約がloaned状態に更新されること | 正常 |
+| UT-38 | LoanService.create_loan | 対応するpending予約がない場合でも貸出登録が正常に完了すること | 正常 |
 
 ### 結合テストケース（バックエンドAPIエンドポイント）
 
@@ -1197,6 +1486,22 @@ apiClientのaxiosレスポンスインターセプターにて以下を共通処
 | IT-22 | POST /api/users/ | 重複login_idで409が返ること | 異常 |
 | IT-23 | DELETE /api/users/{id} | アクティブ貸出なしのユーザーが削除されること | 正常 |
 | IT-24 | DELETE /api/users/{id} | 貸出中ユーザーの削除で409が返ること | 異常 |
+| IT-25 | POST /api/reservations/ | 認証済みユーザーが正常な入力で予約を作成できること | 正常 |
+| IT-26 | POST /api/reservations/ | トークンなしで401が返ること | 異常 |
+| IT-27 | POST /api/reservations/ | 過去日付のplanned_start_dateで422が返ること | 異常 |
+| IT-28 | POST /api/reservations/ | planned_return_date < planned_start_dateで422が返ること | 異常 |
+| IT-29 | POST /api/reservations/ | 重複期間の予約で409が返ること | 異常 |
+| IT-30 | POST /api/reservations/ | 存在しないequipment_idで404が返ること | 異常 |
+| IT-31 | GET /api/reservations/ | 管理者トークンで全予約が返ること | 正常 |
+| IT-32 | GET /api/reservations/ | 一般社員トークンで自身の予約のみ返ること | 正常 |
+| IT-33 | GET /api/reservations/ | トークンなしで401が返ること | 異常 |
+| IT-34 | PUT /api/reservations/{id}/cancel | 予約者本人がキャンセルできること | 正常 |
+| IT-35 | PUT /api/reservations/{id}/cancel | 管理者が任意予約をキャンセルできること | 正常 |
+| IT-36 | PUT /api/reservations/{id}/cancel | 一般社員が他ユーザーの予約をキャンセルしようとして403が返ること | 異常 |
+| IT-37 | PUT /api/reservations/{id}/cancel | キャンセル済み予約に対して409が返ること | 異常 |
+| IT-38 | PUT /api/reservations/{id}/cancel | 存在しないIDで404が返ること | 異常 |
+| IT-39 | POST /api/loans/ | 貸出登録成功時にpending予約がloaned状態に更新されること | 正常 |
+| IT-40 | POST /api/loans/ | pending予約がない場合でも貸出登録が正常に完了すること | 正常 |
 
 ### システムテストケース（ユーザー操作フロー）
 
@@ -1216,6 +1521,15 @@ apiClientのaxiosレスポンスインターセプターにて以下を共通処
 | ST-12 | 管理者 | 貸出中の備品を備品管理画面で削除しようとする | 削除ボタンが非活性または非表示で、削除が実行できないこと |
 | ST-13 | 管理者 | 貸出中の借用者をユーザー管理画面で削除しようとする | 削除ボタンが非活性または非表示で、削除が実行できないこと |
 | ST-14 | 管理者 | ログアウトボタンを押す | ログイン画面に遷移し、その後ブラウザバックしてもダッシュボードが表示されないこと |
+| ST-15 | 一般社員 | S2（貸出状況一覧）から「予約登録」ボタンを押下し、備品・貸出開始予定日・返却予定日を入力して予約する | S10（予約一覧）に遷移し、登録した予約が「予約中」で表示されること |
+| ST-16 | 一般社員 | 既に予約中の備品に対して同一期間で予約しようとする | エラーメッセージが表示され予約が登録されないこと |
+| ST-17 | 一般社員 | S10（予約一覧）で自身の「予約中」の予約の「取消」ボタンを押下する | 予約が「キャンセル済」に更新されること |
+| ST-18 | 一般社員 | S10（予約一覧）に他社員の予約が表示されないことを確認する | 自身の予約のみが一覧に表示されること |
+| ST-19 | 管理者 | S2から「予約一覧」ボタンを押下してS10を確認する | 全社員の予約が表示されること |
+| ST-20 | 管理者 | S10で他ユーザーの「予約中」の予約の「取消」ボタンを押下する | 予約が「キャンセル済」に更新されること |
+| ST-21 | 管理者 | S3（貸出登録画面）で備品を選択した後、その備品のpending予約一覧が画面内に表示されることを確認する | 対象備品の予約中の予約が一覧表示されること |
+| ST-22 | 管理者 | ST-15で登録された予約に対応する備品を選択し、貸出日を貸出開始予定日と同日で貸出登録する | 対応する予約が「貸出済」に更新され、貸出状況一覧に「貸出中」で表示されること |
+| ST-23 | 一般社員 | 未ログイン状態でS10のURL（/reservations）に直接アクセスする | ログイン画面へリダイレクトされること |
 
 ---
 

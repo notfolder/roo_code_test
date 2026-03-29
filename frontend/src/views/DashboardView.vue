@@ -23,6 +23,12 @@
         </v-card>
       </v-col>
       <v-col cols="12" class="mt-4">
+        <div class="d-flex gap-2 mb-3">
+          <v-btn color="secondary" to="/reservations">予約一覧</v-btn>
+          <v-btn color="secondary" to="/reservations/create">予約登録</v-btn>
+        </div>
+      </v-col>
+      <v-col cols="12">
         <v-card>
           <v-card-title>備品一覧</v-card-title>
           <v-data-table

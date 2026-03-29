@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.repositories.loan_record import LoanRecordRepository
 from app.repositories.equipment import EquipmentRepository
 from app.repositories.user import UserRepository
+from app.repositories.reservation import ReservationRepository
 from app.models.loan_record import LoanRecord
 from app.schemas.loan_record import LoanCreate, ReturnUpdate, LoanRecordResponse
 
@@ -13,6 +14,7 @@ class LoanService:
         self.loan_repo = LoanRecordRepository(db)
         self.equipment_repo = EquipmentRepository(db)
         self.user_repo = UserRepository(db)
+        self.reservation_repo = ReservationRepository(db)
         self.db = db
 
     def list_loans(self) -> List[LoanRecordResponse]:
@@ -45,6 +47,7 @@ class LoanService:
         )
         eq.status = "loaned"
         self.loan_repo.add(loan)
+        self.reservation_repo.mark_as_loaned(data.equipment_id)
         self.db.commit()
         self.db.refresh(loan)
         return self._to_response(loan)
