@@ -20,7 +20,7 @@ services:
   backend:
     build: ./backend
     ports:
-      - '3000:3000'
+      - '3001:3000'
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/equipment_management
       JWT_SECRET: dev_jwt_secret_change_in_production
@@ -29,8 +29,8 @@ services:
       db:
         condition: service_healthy
     volumes:
-      - ./backend:/app
-      - /app/node_modules
+      - ./backend/src:/app/src
+      - ./backend/prisma:/app/prisma
 
   frontend:
     build: ./frontend
@@ -38,6 +38,8 @@ services:
       - '5173:5173'
     depends_on:
       - backend
+    volumes:
+      - ./frontend/src:/app/src
 
 volumes:
   postgres_data:
