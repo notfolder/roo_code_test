@@ -1,0 +1,57 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum EquipmentStatus {
+  AVAILABLE
+  ON_LOAN
+  DISPOSED
+}
+
+model User {
+  id          String       @id @default(uuid())
+  name        String
+  email       String       @unique
+  password    String
+  role        Role         @default(USER)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  loanRecords LoanRecord[]
+}
+
+model Equipment {
+  id          String          @id @default(uuid())
+  assetNumber String          @unique
+  name        String
+  category    String
+  quantity    Int
+  status      EquipmentStatus @default(AVAILABLE)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  loanRecords LoanRecord[]
+}
+
+model LoanRecord {
+  id          String     @id @default(uuid())
+  equipmentId String
+  userId      String
+  loanDate    DateTime
+  dueDate     DateTime
+  returnedAt  DateTime?
+  createdAt   DateTime   @default(now())
+  equipment   Equipment  @relation(fields: [equipmentId], references: [id])
+  user        User       @relation(fields: [userId], references: [id])
+}

@@ -1,0 +1,43 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:15
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: equipment_management
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    ports:
+      - '3000:3000'
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/equipment_management
+      JWT_SECRET: dev_jwt_secret_change_in_production
+      NODE_ENV: development
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
+  frontend:
+    build: ./frontend
+    ports:
+      - '5173:5173'
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
