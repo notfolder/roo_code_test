@@ -9,11 +9,6 @@ services:
       POSTGRES_DB: equipment_db
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U appuser -d equipment_db"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
 
   backend:
     build: ./backend
@@ -22,15 +17,14 @@ services:
       JWT_SECRET_KEY: change-this-secret-key-in-production
       JWT_EXPIRE_HOURS: 8
     depends_on:
-      db:
-        condition: service_healthy
+      - db
 
   nginx:
     build:
       context: .
       dockerfile: frontend/Dockerfile
     ports:
-      - "80:80"
+      - "8080:80"
     depends_on:
       - backend
 

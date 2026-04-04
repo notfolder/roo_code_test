@@ -13,7 +13,7 @@
 docker compose up --build
 ```
 
-起動後、ブラウザで http://localhost にアクセスしてください。
+起動後、ブラウザで http://localhost:8080 にアクセスしてください。
 
 ## 初期ログイン情報
 
