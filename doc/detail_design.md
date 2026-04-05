@@ -32,7 +32,7 @@
 | frontend | Vue 3 + Vuetify 3 + nginx | UIの提供・静的ファイル配信・/api/リバースプロキシ |
 | backend | FastAPI（Python） | 業務ロジック・REST API提供 |
 | db_volume | Dockerボリューム（SQLiteファイル） | データ永続化 |
-| test_playwright | Playwright MCP Server v0.0.70 | E2Eテスト実行環境（profileがtestのときのみ起動） |
+| test_playwright | Playwright MCP Server v1.59.0 | E2Eテスト実行環境（profileがtestのときのみ起動） |
 
 ### システム構成図
 
@@ -878,8 +878,8 @@ README.md には以下を記述すること:
 
 ### playwrightテスト環境
 
-- Playwright MCP Server v0.0.70 を使用する
-- エンドポイント: `http://localhost:${PLAYWRIGHT_PORT:-8931}/mcp`（v0.0.70以降は `/mcp`、`/sse` ではない）
+- Playwright MCP Server v1.59.0 を使用する
+- エンドポイント: `http://localhost:${PLAYWRIGHT_PORT:-8931}/mcp`（v1.59.0以降は `/mcp`、`/sse` ではない）
 - docker-compose の profile を `test` とし、通常起動（`docker compose up`）では起動しない
 - `./e2e` ディレクトリをコンテナにマウントし、テストコードの変更が即時反映されるようにする
 
