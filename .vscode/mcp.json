@@ -1,0 +1,8 @@
+{
+  "servers": {
+    "test_playwright": {
+      "type": "http",
+      "url": "http://localhost:9999/mcp"
+    }
+  }
+}
