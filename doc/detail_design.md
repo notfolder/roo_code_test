@@ -56,16 +56,16 @@ graph TD
 graph LR
     subgraph host["ホストマシン"]
         Port80["port 80"]
-        Port9999["port ${PLAYWRIGHT_PORT:-9999}\n（testプロファイル時のみ）"]
+        Port8931["port ${PLAYWRIGHT_PORT:-8931}\n（testプロファイル時のみ）"]
     end
     subgraph docker["Docker内部ネットワーク（app-network）"]
         FE["frontend:80"]
         BE["backend:8000"]
-        PW["test_playwright:9999"]
+        PW["test_playwright:8931"]
     end
     Port80 --> FE
     FE -->|/api/| BE
-    Port9999 --> PW
+    Port8931 --> PW
     PW --> FE
 ```
 
@@ -773,10 +773,10 @@ services:
 
   test_playwright:
     image: mcr.microsoft.com/playwright:v1.50.0（または playwright-mcp:0.0.70）
-    ports: ${PLAYWRIGHT_PORT:-9999}:9999
+    ports: ${PLAYWRIGHT_PORT:-8931}:8931
     profiles: ["test"]               ← 通常起動では起動しない
     volumes: ./e2e:/e2e              ← テストコードをマウント（変更が即時反映）
-    command: playwright mcp --port 9999
+    command: playwright mcp --port 8931
 
 volumes:
   db_data:
@@ -796,7 +796,7 @@ volumes:
 | ADMIN_LOGIN_ID | 初期管理者ログインID | admin |
 | ADMIN_PASSWORD | 初期管理者パスワード | AdminPass123 |
 | JWT_SECRET_KEY | JWT署名キー | 本番環境では必ず変更すること |
-| PLAYWRIGHT_PORT | PlaywrightMCPポート | 9999 |
+| PLAYWRIGHT_PORT | PlaywrightMCPポート | 8931 |
 
 ### README.md 記述事項
 
@@ -809,11 +809,11 @@ README.md には以下を記述すること:
 
 2. **E2Eテスト実行方法**
    - `docker compose --profile test up --build` でPlaywright MCP含む全サービス起動
-   - MCP接続エンドポイント: `http://localhost:9999/mcp`
+   - MCP接続エンドポイント: `http://localhost:8931/mcp`
 
 3. **Playwright MCP接続手順**
-   - GitHub Copilot: `.vscode/mcp.json` に `{ "servers": { "test_playwright": { "type": "http", "url": "http://localhost:9999/mcp" } } }` を追加
-   - Claude Code: `claude mcp add --transport http test_playwright http://localhost:9999/mcp`
+   - GitHub Copilot: `.vscode/mcp.json` に `{ "servers": { "test_playwright": { "type": "http", "url": "http://localhost:8931/mcp" } } }` を追加
+   - Claude Code: `claude mcp add --transport http test_playwright http://localhost:8931/mcp`
    - Roo Code: settings.json の `roo-cline.mcpServers` に追加
 
 ---
@@ -870,7 +870,7 @@ README.md には以下を記述すること:
 ### 実行フロー
 
 1. 全コードの実装完了後、`docker compose --profile test up --build` で起動する
-2. Playwright MCP サーバー (`http://localhost:9999/mcp`) に接続する
+2. Playwright MCP サーバー (`http://localhost:8931/mcp`) に接続する
    - MCP サーバーが利用できない場合は、ユーザーに接続手順（README.md を参照）を案内する
 3. 以下の全シナリオについて MCP 経由でブラウザ操作し E2E テストを実行する
 4. テスト結果を確認し、失敗があれば実装を修正し再実行する

@@ -1,0 +1,39 @@
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+  backend:
+    build: ./backend
+    volumes:
+      - db_data:/app/db
+    env_file:
+      - .env
+    networks:
+      - app-network
+
+  test_playwright:
+    image: mcr.microsoft.com/playwright:v1.59.0-noble
+    ports:
+      - "${PLAYWRIGHT_PORT:-8931}:8931"
+    profiles:
+      - test
+    volumes:
+      - ./e2e:/e2e
+    working_dir: /e2e
+    command: >
+      npx -y @playwright/mcp@0.0.70 --port 8931 --host 0.0.0.0
+    networks:
+      - app-network
+
+volumes:
+  db_data:
+
+networks:
+  app-network:
+    driver: bridge

@@ -62,7 +62,7 @@
 |----|--------|---------|
 | 5-1 | e2e/playwright.config.js 作成 | Playwright設定ファイルが作成されていること |
 | 5-2 | e2e/tests/scenarios.spec.js 実装 | 設計書のE2Eシナリオ T01〜T10 が全て実装されていること |
-| 5-3 | `docker compose --profile test up --build` での起動確認 | test_playwright コンテナが起動し http://localhost:9999/mcp にアクセスできること |
+| 5-3 | `docker compose --profile test up --build` での起動確認 | test_playwright コンテナが起動し http://localhost:8931/mcp にアクセスできること |
 
 ### フェーズ6: E2Eテスト実行・修正
 
