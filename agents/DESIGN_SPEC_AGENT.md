@@ -79,7 +79,9 @@ prompt_id="1.0.5"
     - playwrightテスト環境はdocker composeの中で、テストコードをマウントして、テストコードの変更が即座にテスト環境に反映されるように設計書に書いておくこと
     - playwrightテスト環境はdocker composeのprofileをtestとし、通常の起動では起動しないように設計書に書いておくこと
     - 設計書にE2Eテストを含む全てのコードを実装後、docker composeを``--profile test``で起動し、E2Eテストをtest_playwrightサービス内で実行することを設計書に書いておくこと
-    - E2Eテストはプロジェクトルートのe2e_testsディレクトリにテストコードを配置、package.jsonを作成し、npx playwright testすることを設計書に書いておくこと
+    - E2Eテストはプロジェクトルートのe2eディレクトリにテストコードを配置、package.jsonを作成しすることを設計書に書いておくこと
+    - E2Eテストは```docker compose run --rm test_playwright sh -c "npm install && npx playwright test"```などでE2Eテストを実行することを設計書に書いておくこと
+    - E2Eテストを実行する場合のベースURLに気をつけること。docker compose内で実行するため、アクセスするフロントのURLはサービス名になることを設計書に書いておくこと
     - E2Eテストの実行結果を確認し、問題があれば修正、E2Eテストが全て成功するまで実装を繰り返すことを設計書に書いておくこと
 
 # 完全性制約（必須）
