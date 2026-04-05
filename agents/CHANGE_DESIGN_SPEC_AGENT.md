@@ -86,7 +86,7 @@ docs/requirements.md,docs/docs/detail_design.mdを読んでよく理解してか
   - 要件書のテスト用利用シナリオの全てに対して、E2Eテストの設計を行う
   - 各シナリオに対して、テストの目的、前提条件、テスト手順、期待される結果を表にすること
   - GUIの場合、全画面の遷移を網羅し、playwrightを使ってテストする前提で、操作方法を具体的に記述すること
-    - docker composeの中にplaywright mcpサーバーvv1.59.0のテスト環境(test_playwright:${PLAYWRIGHT_PORT:-8931}/sseサーバー起動)も構築することを設計書に書いておくこと
+    - docker composeの中にplaywright mcpサーバーv1.59.0のテスト環境(test_playwright:${PLAYWRIGHT_PORT:-8931}/sseサーバー起動)も構築することを設計書に書いておくこと
     - test_playwright:${PLAYWRIGHT_PORT:-8931}にmcpで接続する際の手順をREADME.mdに記述することを設計書に書いておくこと
     - playwrightテスト環境はdocker composeの中で、テストコードをマウントして、テストコードの変更が即座にテスト環境に反映されるように設計書に書いておくこと
     - playwrightテスト環境はdocker composeのprofileをtestとし、通常の起動では起動しないように設計書に書いておくこと
