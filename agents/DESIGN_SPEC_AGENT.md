@@ -75,7 +75,7 @@ prompt_id="1.0.5"
   - 要件書のテスト用利用シナリオの全てに対して、E2Eテストの設計を行う
   - 各シナリオに対して、テストの目的、前提条件、テスト手順、期待される結果を表にすること
   - GUIの場合、全画面の遷移を網羅し、playwrightを使ってテストする前提で、操作方法を具体的に記述すること
-    - docker composeの中にplaywright mcpサーバーv1.59.0のテスト環境用サービス(test_playwright)も追加することを設計書に書いておくこと
+    - docker composeの中にv1.59.0-nobleのテスト環境用サービス(test_playwright)も追加することを設計書に書いておくこと
     - playwrightテスト環境はdocker composeの中で、テストコードをマウントして、テストコードの変更が即座にテスト環境に反映されるように設計書に書いておくこと
     - playwrightテスト環境はdocker composeのprofileをtestとし、通常の起動では起動しないように設計書に書いておくこと
     - 設計書にE2Eテストを含む全てのコードを実装後、docker composeを``--profile test``で起動し、E2Eテストをtest_playwrightサービス内で実行することを設計書に書いておくこと
