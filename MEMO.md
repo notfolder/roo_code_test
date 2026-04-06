@@ -5,6 +5,15 @@ AIは人間と同じでサボるものだ。人間と同じようにプロジェ
 人間のプロジェクトマネージャーがやることをAIにやらせる。人間はAIのプロジェクトマネージャーになる。
 そのためのroo codeのagentを作ってみる。
 
+詳細は下記記事を参照
+https://qiita.com/notfolder/items/34cc12003dc7e63c45e5
+https://qiita.com/notfolder/items/3daa610f6e3d9392c344
+
+## 変更履歴
+v.1.0.4: 公開初回版
+v.1.0.5: E2Eテスト仮版
+
+
 ## お試し開発
 
 # 三回目の正直
