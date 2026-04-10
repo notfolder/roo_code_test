@@ -1,0 +1,16 @@
+# タスク一覧（詳細設計に基づく）
+- タスク: FastAPIバックエンドの実装
+  - 完了条件: `auth`, `items`, `loans`, `users` の各エンドポイントが設計通りに定義されている
+  - バリデーション: 各エンドポイントに対する単体テスト（FastAPI テストクライアント）を用意し、意図したステータスコードが返ることを確認
+- タスク: Vue/Vuetify フロントエンドの画面実装
+  - 完了条件: ログイン、備品一覧、登録/編集モーダル、貸出/返却画面、ユーザー管理画面を実装
+  - バリデーション: Storybook 風のスナップショット的確認または画面テストで想定した要素が描画されることを示す
+- タスク: PostgreSQL と Docker Compose による起動・初期化
+  - 完了条件: docker-compose.yml に backend/frontend/db/test_playwright サービスが揃い、起動時にマイグレーションと初期総務アカウントが作成される
+  - バリデーション: `docker compose up --build` で稼働確認し、初期ユーザーでログインできることを API テストで確認
+- タスク: テスト基盤・Playwright E2E 作成
+  - 完了条件: e2e ディレクトリに package.json と Playwright テストが置かれ、`test_playwright` サービスで `npm install && npx playwright test` が実行可能
+  - バリデーション: `docker compose run --rm test_playwright ...` をローカルで実行し、全シナリオが通過すること
+- タスク: 全体実装のレビューと検証
+  - 完了条件: すべてのコード/構成が detail_design.md の要件を満たし、不要機能が加わっていない状態にある
+  - バリデーション: 差分確認 + `docker compose --profile test run --rm test_playwright ...` で成功を確認
