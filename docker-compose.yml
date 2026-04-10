@@ -1,0 +1,32 @@
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - app_network
+
+  backend:
+    build: ./backend
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+    networks:
+      - app_network
+
+  test_playwright:
+    image: mcr.microsoft.com/playwright:v1.59.0-noble
+    profiles:
+      - test
+    volumes:
+      - ./e2e:/e2e
+    working_dir: /e2e
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge
