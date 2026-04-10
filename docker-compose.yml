@@ -1,0 +1,57 @@
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: asset_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/asset_db
+      SECRET_KEY: supersecretkey
+      ADMIN_EMAIL: admin@example.com
+      ADMIN_PASSWORD: adminpassword
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:80"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    environment:
+      VITE_API_BASE: "/api"
+    depends_on:
+      - backend
+    ports:
+      - "4173:80"
+
+  test_playwright:
+    profiles:
+      - test
+    image: mcr.microsoft.com/playwright:v1.59.0-noble-arm64
+    working_dir: /e2e
+    command: sh -c "npm install && npx playwright install chromium && npm run test"
+    environment:
+      PLAYWRIGHT_BASE_URL: http://frontend:80
+    networks:
+      - default
+    volumes:
+      - ./e2e:/e2e
+    depends_on:
+      - frontend
+
+volumes:
+  db_data:
