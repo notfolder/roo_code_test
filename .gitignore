@@ -20,6 +20,10 @@ frontend/.env
 
 # Coverage
 coverage/
+.pytest_cache/
+__pycache__/
+*.pyc
+test.db
 
 # Logs
 logs/

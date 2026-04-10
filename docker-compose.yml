@@ -1,0 +1,51 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: equipment
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d equipment"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./src/backend
+    environment:
+      DATABASE_URL: postgresql+psycopg2://app:app@db:5432/equipment
+      JWT_SECRET_KEY: local-dev-secret
+      JWT_EXPIRE_MINUTES: 480
+      ADMIN_EMAIL: admin@example.com
+      ADMIN_PASSWORD: admin1234
+      ADMIN_NAME: 総務 太郎
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./src/frontend
+    depends_on:
+      - backend
+    ports:
+      - "4173:80"
+
+  test_playwright:
+    image: mcr.microsoft.com/playwright:v1.59.1-jammy
+    profiles: ["test"]
+    working_dir: /e2e
+    environment:
+      BASE_URL: http://frontend
+    volumes:
+      - ./e2e:/e2e
+    depends_on:
+      - frontend
+    command: sh -c "npm install && npx playwright test"
+
+volumes:
+  postgres_data:
