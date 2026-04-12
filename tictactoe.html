@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic-Tac-Toe</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 2.5em;
+        }
+
+        .status {
+            background: #f0f0f0;
+            padding: 15px 25px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+            color: #555;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            gap: 5px;
+            margin-bottom: 20px;
+        }
+
+        .cell {
+            width: 100px;
+            height: 100px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            background: white;
+            font-size: 2.5em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .cell:hover {
+            background: #f8f9fa;
+            transform: scale(1.05);
+        }
+
+        .cell.x {
+            color: #e74c3c;
+        }
+
+        .cell.o {
+            color: #3498db;
+        }
+
+        .restart-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1.1em;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .restart-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .restart-btn:active {
+            transform: translateY(0);
+        }
+
+        .winner-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            background: rgba(255, 215, 0, 0.95);
+            padding: 40px 60px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(255, 165, 0, 0.3);
+            z-index: 1000;
+            transition: transform 0.5s ease;
+        }
+
+        .winner-message.show {
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .winner-message h2 {
+            color: #d4af37;
+            font-size: 2.5em;
+        }
+
+        .winner-message p {
+            color: #333;
+            font-size: 1.2em;
+        }
+
+        .turn-indicator {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        .turn-x { background: #e74c3c; }
+        .turn-o { background: #3498db; }
+
+        @media (max-width: 500px) {
+            .board {
+                grid-template-columns: repeat(3, 80px);
+            }
+
+            .cell {
+                width: 80px;
+                height: 80px;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Tic-Tac-Toe</h1>
+        <div class="status">
+            <span class="turn-indicator turn-x"></span>
+            Player X's Turn
+        </div>
+        <div class="board" id="board"></div>
+        <button class="restart-btn" onclick="restartGame()">Restart Game</button>
+    </div>
+
+    <div class="winner-message" id="winnerMessage">
+        <h2 id="winnerText"></h2>
+        <p id="winnerSubtext"></p>
+    </div>
+
+    <script>
+        const boardElement = document.getElementById('board');
+        const statusElement = document.querySelector('.status');
+        const winnerMessage = document.getElementById('winnerMessage');
+        const winnerText = document.getElementById('winnerText');
+        const winnerSubtext = document.getElementById('winnerSubtext');
+
+        let board = ['', '', '', '', '', '', '', '', ''];
+        let currentPlayer = 'X';
+        let gameActive = true;
+
+        const winningConditions = [
+            [0, 1, 2],
+            [3, 4, 5],
+            [6, 7, 8],
+            [0, 3, 6],
+            [1, 4, 7],
+            [2, 5, 8],
+            [0, 4, 8],
+            [2, 4, 6]
+        ];
+
+        function createBoard() {
+            boardElement.innerHTML = '';
+            for (let i = 0; i < 9; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.setAttribute('data-index', i);
+                cell.addEventListener('click', handleCellClick);
+                boardElement.appendChild(cell);
+            }
+        }
+
+        function handleCellClick(e) {
+            const clickedCell = e.target;
+            const clickedCellIndex = parseInt(clickedCell.getAttribute('data-index'));
+
+            if (board[clickedCellIndex] !== '' || !gameActive) {
+                return;
+            }
+
+            const cells = document.querySelectorAll('.cell');
+            cells[clickedCellIndex].textContent = currentPlayer;
+            cells[clickedCellIndex].classList.add(currentPlayer.toLowerCase());
+            board[clickedCellIndex] = currentPlayer;
+
+            checkResult();
+        }
+
+        function checkResult() {
+            let roundWon = false;
+
+            for (let i = 0; i < winningConditions.length; i++) {
+                const winCondition = winningConditions[i];
+                let a = board[winCondition[0]];
+                let b = board[winCondition[1]];
+                let c = board[winCondition[2]];
+
+                if (a === '' || b === '' || c === '') {
+                    continue;
+                }
+
+                if (a === b && b === c) {
+                    roundWon = true;
+                    break;
+                }
+            }
+
+            if (roundWon) {
+                gameActive = false;
+                winnerText.textContent = `Player ${currentPlayer} Wins!`;
+                winnerSubtext.textContent = 'Congratulations!';
+                setTimeout(() => {
+                    winnerMessage.classList.add('show');
+                }, 50);
+                return;
+            }
+
+            let draw = !board.includes('');
+            if (draw) {
+                gameActive = false;
+                winnerText.textContent = 'It\'s a Draw!';
+                winnerSubtext.textContent = 'No winner this time.';
+                setTimeout(() => {
+                    winnerMessage.classList.add('show');
+                }, 50);
+                return;
+            }
+
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            updateStatus();
+        }
+
+        function updateStatus() {
+            const turnIndicator = statusElement.querySelector('.turn-indicator');
+            if (currentPlayer === 'X') {
+                turnIndicator.classList.remove('turn-o');
+                turnIndicator.classList.add('turn-x');
+            } else {
+                turnIndicator.classList.remove('turn-x');
+                turnIndicator.classList.add('turn-o');
+            }
+            statusElement.innerHTML = `<span class="turn-indicator turn-${currentPlayer.toLowerCase()}\"></span> Player ${currentPlayer}'s Turn`;
+        }
+
+        function restartGame() {
+            gameActive = true;
+            currentPlayer = 'X';
+            board = ['', '', '', '', '', '', '', '', ''];
+
+            document.querySelectorAll('.cell').forEach(cell => {
+                cell.textContent = '';
+                cell.classList.remove('x', 'o');
+            });
+
+            winnerMessage.classList.remove('show');
+            updateStatus();
+        }
+
+        createBoard();
+    </script>
+</body>
+</html>
